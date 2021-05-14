@@ -82,9 +82,9 @@ func (this *UserMessageProcessing) Registered(userId int, userPwd, userName stri
 		return
 	}
 	if registeredResMessageData.Code == 200 {
-		go ClientKeepsService(coon)
+		go ClientKeepsService(coon, userId)
 		for {
-			ShowLoginMenu(registeredResMessageData.UserName)
+			ShowRegisteredMenu(&registeredResMessageData)
 		}
 	} else {
 		fmt.Println(registeredResMessageData.Error)
@@ -172,9 +172,15 @@ func (this *UserMessageProcessing) Login(userId int, userPwd string) (err error)
 		return
 	}
 	if loginResMes.Code == 200 {
-		go ClientKeepsService(coon)
+		//初始化当前用户
+		currentUser.Coon = coon
+		currentUser.UserId = userId
+		currentUser.UserCurrentStatus = messageStruct.UserIsOnline
+
+		go ClientKeepsService(coon, userId)
+
 		for {
-			ShowLoginMenu(loginResMes.UserName)
+			ShowLoginMenu(&loginResMes)
 		}
 	} else {
 		fmt.Println(loginResMes.Error)

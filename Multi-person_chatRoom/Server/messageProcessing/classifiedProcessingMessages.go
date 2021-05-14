@@ -37,6 +37,10 @@ func (this *ClassifiedProcessing_Messages) ClassifiedProcessingMessages(mes *mes
 				fmt.Printf("处理注册消息失败%v\n", err)
 				return
 			}
+		case messageStruct.SmsMessageType:
+			fmt.Printf("客户端收到群发消息%v\n", mes)
+			smsMessageProcessing := SmsMessageProcessing{}
+			smsMessageProcessing.Group_messageProcessing(mes)
 		default:
 			fmt.Println("消息类型错误")
 		}

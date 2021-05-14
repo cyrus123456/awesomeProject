@@ -10,10 +10,60 @@ import (
 )
 
 type UserMessageProcessing struct {
-	Coon net.Conn
+	Coon   net.Conn
+	UserId int
 }
 
-//处理注册消息
+//-------------------------------通知所以用户此用户上线
+func (this *UserMessageProcessing) NotifyOtherOnlineUsers(userId int) {
+	for key, userMessageProcessing := range onLineUserMgr.onLineUsers {
+		if key == userId {
+			continue
+		}
+		err := userMessageProcessing.Notice(userId)
+		if err != nil {
+			fmt.Printf("服务端通知消息函数失败%v\n", err)
+			return
+		}
+	}
+}
+
+//通知函数
+func (this *UserMessageProcessing) Notice(userId int) (err error) {
+	mes := messageStruct.Message{}
+	mes.Type = messageStruct.UserStatusNotificationType
+
+	userStatus := messageStruct.UserStatusNotification{}
+	userStatus.UserId = userId
+	userStatus.UserCurrentStatus = messageStruct.UserIsOnline
+
+	userStatusByte, err := json.Marshal(userStatus)
+	if err != nil {
+		fmt.Printf("用户状态信息序列化失败%v\n", err)
+		return
+	}
+
+	mes.Data = string(userStatusByte)
+	mesByte, err := json.Marshal(mes)
+	if err != nil {
+		fmt.Printf("携带用户状态信息结构体序列化失败%v\n", err)
+		return
+	}
+	//	发送返回客户端
+	tT := tools.Transfer{
+		Conn: this.Coon,
+	}
+	mes, err = tT.WritePKg(mesByte)
+	if err != nil {
+		fmt.Printf("发送用户状态改变的用户给其他用户失败%v\n", err)
+		return
+	}
+	fmt.Printf("发送用户状态改变的用户给其他用户的信息%v\n", mes)
+	return
+}
+
+//-------------------------------------处理注册消息
+
 func (this UserMessageProcessing) Registered_messageProcessing(mes *messageStruct.Message) (err error) {
 	//实例化一个空的注册消息结构体
 	registeredMesData := messageStruct.RegisteredMessageData{}
@@ -43,9 +93,19 @@ func (this UserMessageProcessing) Registered_messageProcessing(mes *messageStruc
 			return
 		}
 	} else {
+		this.UserId = registeredMesData.UserId
+
+		onLineUserMgr.AddOnlineUser(&this)
+		//range遍历map切片下标会变成key值
+		for id, _ := range onLineUserMgr.onLineUsers {
+			registeredResMessageData.OnLineUsersId = append(registeredResMessageData.OnLineUsersId, id)
+		}
+		registeredResMessageData.UserId = this.UserId
 		registeredResMessageData.Code = 200 //用户用户注册成功
 		registeredResMessageData.UserName = registeredMesData.UserName
 		fmt.Printf("用户已存在%v\n", err)
+
+		this.NotifyOtherOnlineUsers(this.UserId)
 	}
 	//-------------------重新序列化网络传输返回客户端
 	loginResMes_jsonByte, err := json.Marshal(registeredResMessageData)
@@ -81,7 +141,7 @@ func (this UserMessageProcessing) Registered_messageProcessing(mes *messageStruc
 	return
 }
 
-//处理登陆消息
+//--------------------------------------处理登陆消息
 func (this *UserMessageProcessing) Login_messageProcessing(mes *messageStruct.Message) (err error) {
 	//实例化一个空的登录消息结构体
 	loginMes := messageStruct.LoginMessageData{}
@@ -114,9 +174,20 @@ func (this *UserMessageProcessing) Login_messageProcessing(mes *messageStruct.Me
 			fmt.Printf("服务端验证客户失败、未知错误%v\n", err)
 		}
 	} else {
+		this.UserId = loginMes.UserId
+
+		onLineUserMgr.AddOnlineUser(this)
+		//range遍历map切片下标会变成key值
+		for id, _ := range onLineUserMgr.onLineUsers {
+			loginResMes.OnLineUsersId = append(loginResMes.OnLineUsersId, id)
+		}
+		loginResMes.UserId = this.UserId
 		loginResMes.Code = 200 //200表示通过
 		loginResMes.UserName = user.UserName
 		fmt.Printf("服务端验证用户%v登陆成功\n", user.UserName)
+
+		this.NotifyOtherOnlineUsers(this.UserId)
+
 	}
 
 	loginResMes_jsonByte, err := json.Marshal(loginResMes)

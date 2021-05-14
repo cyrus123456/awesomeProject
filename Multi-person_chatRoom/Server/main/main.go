@@ -177,6 +177,8 @@ func main() {
 	//初始化连接池
 	model.InitPool(16, 0, time.Second, "127.0.0.1:6379")
 	model.InitUserDao()
+	//初始化在线用户
+	messageProcessing.InitOnLineUserMgr()
 	//客户端提示信息
 	fmt.Println("服务器监听端口6666……")
 	listener, err := net.Listen("tcp", "0.0.0.0:6666")
