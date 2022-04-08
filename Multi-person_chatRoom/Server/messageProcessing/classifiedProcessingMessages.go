@@ -8,6 +8,11 @@ import (
 	"net"
 )
 
+type Interface_ClassifiedProcessing_Messages interface {
+	ClassifiedProcessingMessages(mes *messageStruct.Message) error
+	CommunicationFor() error
+}
+
 type ClassifiedProcessing_Messages struct {
 	Coon net.Conn
 }

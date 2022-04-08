@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/garyburd/redigo/redis"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 var pool *redis.Pool
